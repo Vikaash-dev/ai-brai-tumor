@@ -79,7 +79,7 @@ ipywidgets==8.1.1
 # 1. Create virtual environment: python -m venv venv
 # 2. Activate: source venv/bin/activate (Linux/Mac) or venv\Scripts\activate (Windows)
 # 3. Install: pip install -r requirements.txt
-# 4. GPU support: pip install tensorflow[and-cuda] (for NVIDIA GPUs)
+# 4. GPU support: pip install tensorflow[cuda] (for NVIDIA GPUs)
 #
 # Tested on:
 # - Python 3.10, 3.11
