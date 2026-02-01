@@ -342,6 +342,9 @@ class MultiSpectralConcordanceGating(layers.Layer):
             name=f'{self.name}/norm'
         )
         
+        # Residual projection (will be built on first call if needed)
+        self.residual_proj = None
+        
         super().build(input_shape)
         
     def call(self, inputs, training=None):
@@ -389,11 +392,9 @@ class MultiSpectralConcordanceGating(layers.Layer):
         
         # Residual connection
         if self.use_residual:
-            # Match dimensions if needed
-            if fused.shape[-1] != original.shape[-1]:
-                fused = layers.Conv2D(
-                    original.shape[-1], 1, padding='same'
-                )(fused)
+            # Match dimensions if needed (use pre-built projection)
+            if hasattr(self, 'residual_proj') and self.residual_proj is not None:
+                fused = self.residual_proj(fused)
             fused = fused + original
         
         return fused

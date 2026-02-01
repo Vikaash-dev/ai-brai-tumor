@@ -113,12 +113,20 @@ class S6SelectiveSSM(layers.Layer):
         dt_init_std = self.dt_rank_value ** -0.5
         
         # A parameter (diagonal state matrix)
-        # Initialize using S4D-Lin initialization
-        A = np.repeat(np.arange(1, self.state_dim + 1), self.d_inner).reshape(self.state_dim, self.d_inner).T
+        # S4D-Lin Initialization (from "Efficiently Modeling Long Sequences with 
+        # Structured State Spaces" and "On the Parameterization and Initialization 
+        # of Diagonal State Space Models"):
+        # - A is diagonal with entries 1, 2, 3, ..., state_dim
+        # - Stored in log space for numerical stability: A_log = log(A)
+        # - Actual A used is: A = -exp(A_log) (negative for stability)
+        # - Shape: (d_inner, state_dim) - each inner dim has its own state matrix
+        A_diag = np.arange(1, self.state_dim + 1, dtype=np.float32)  # [1, 2, ..., N]
+        A_init = np.tile(A_diag, (self.d_inner, 1))  # (d_inner, state_dim)
+        
         self.A_log = self.add_weight(
             name='A_log',
             shape=(self.d_inner, self.state_dim),
-            initializer=tf.constant_initializer(np.log(A)),
+            initializer=tf.constant_initializer(np.log(A_init)),
             trainable=True
         )
         
@@ -157,16 +165,21 @@ class S6SelectiveSSM(layers.Layer):
         batch_size = tf.shape(u)[0]
         seq_len = tf.shape(u)[1]
         
-        # Discretize A and B using delta
+        # Discretize A and B using delta (Zero-Order Hold discretization)
         # A_bar = exp(delta * A)
         deltaA = tf.einsum('bld,dn->bldn', delta, A)
         deltaA = tf.exp(deltaA)
         
-        # B_bar = delta * B
+        # B_bar = delta * B (simplified from (A^-1)(exp(delta*A) - I)B)
         deltaB_u = tf.einsum('bld,bln,bld->bldn', delta, B, u)
         
-        # Sequential scan (could be parallelized with associative scan)
-        # For simplicity, using tf.scan
+        # Sequential scan using tf.scan
+        # Note: This is O(N) sequential. For production deployment with long sequences,
+        # consider implementing parallel associative scan (O(log N) depth) using:
+        # - Custom CUDA kernels (like Mamba's official implementation)
+        # - JAX's lax.associative_scan
+        # - Chunked parallel processing
+        # Trade-off: Sequential is simpler but slower; parallel is complex but faster
         def scan_fn(carry, inputs):
             x_prev = carry
             deltaA_t, deltaB_u_t = inputs

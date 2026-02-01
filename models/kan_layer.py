@@ -75,12 +75,20 @@ class BSplineBasis(layers.Layer):
         
     def _basis_function(self, x, i, k, knots):
         """
-        Recursive B-spline basis function computation.
+        Recursive B-spline basis function computation (Cox-de Boor formula).
+        
+        Note: This recursive implementation is simple but has O(2^k) complexity.
+        For production with high spline orders, consider:
+        1. Iterative Cox-de Boor (O(k^2) per evaluation point)
+        2. Pre-computed basis matrices
+        3. Efficient TensorFlow sparse operations
+        
+        The recursive approach is acceptable for spline_order <= 4 (typical).
         
         Args:
             x: Input values
             i: Knot index
-            k: Spline order
+            k: Spline order (recursion depth)
             knots: Knot vector
             
         Returns:
@@ -92,7 +100,7 @@ class BSplineBasis(layers.Layer):
                 tf.float32
             )
         
-        # Recursive formula
+        # Cox-de Boor recursive formula
         denom1 = knots[i + k] - knots[i]
         denom2 = knots[i + k + 1] - knots[i + 1]
         
@@ -274,8 +282,11 @@ class KANLinear(layers.Layer):
         # Apply scale
         if self.enable_standalone_scale_spline:
             # spline_scale: (in_features, out_features)
-            scale = tf.reduce_mean(self.spline_scale, axis=0)  # (out_features,)
-            spline_output = spline_output * scale * self.scale_spline
+            # Apply per-output-feature scaling (sum over input features)
+            # This preserves the TTT adaptation capability per output channel
+            scale_per_output = tf.reduce_sum(self.spline_scale, axis=0)  # (out_features,)
+            scale_per_output = scale_per_output / tf.cast(self.in_features, tf.float32)  # Normalize
+            spline_output = spline_output * scale_per_output * self.scale_spline
         else:
             spline_output = spline_output * self.scale_spline
         
