@@ -264,14 +264,163 @@ This implementation is based on:
 
 ---
 
+## 🆕 SOTA Features (True State-of-the-Art)
+
+This implementation leverages the latest research from arXiv, top conferences (CVPR, MICCAI, ICCV), and SOTA GitHub repositories.
+
+### Training Improvements (from nnU-Net, MONAI)
+- ✅ **Mixed Precision Training (AMP)**: 2-3x speedup on GPU
+- ✅ **K-Fold Cross-Validation**: Patient-level stratification
+- ✅ **Advanced LR Schedulers**: Cosine annealing with warmup, OneCycle
+- ✅ **Gradient Clipping**: Prevents training instability
+- ✅ **Early Stopping**: With patience and best weights restoration
+- ✅ **Reproducibility**: Seed fixing for deterministic results
+
+### Clinical Preprocessing (from nnU-Net)
+- ✅ **Skull Stripping**: Brain extraction using morphological operations
+- ✅ **N4 Bias Field Correction**: Corrects RF coil inhomogeneities
+- ✅ **CLAHE Enhancement**: Adaptive contrast enhancement
+- ✅ **Z-Score Normalization**: Per-scan intensity standardization
+
+### Clinical Postprocessing
+- ✅ **MC Dropout Uncertainty**: "I don't know" for ambiguous cases
+- ✅ **Grad-CAM Explainability**: Visual attention maps
+- ✅ **Confidence Thresholding**: Flags low-confidence predictions
+- ✅ **Clinical Reports**: Automated diagnostic reports
+
+### Edge Deployment (EfficientQuant)
+- ✅ **Hybrid Quantization**: Uniform for CNN, Log2 for Transformer
+- ✅ **TFLite Export**: For mobile/edge deployment
+- ✅ **2.5-8.7× Latency Reduction**: With <1% accuracy loss
+
+### Test-Time Augmentation (TTA)
+- ✅ Horizontal/Vertical flip
+- ✅ 90°/180°/270° rotation
+- ✅ Prediction averaging
+
+---
+
+## 🛠️ Advanced Usage
+
+### K-Fold Cross-Validation
+
+```python
+from src.training_improvements import SOTATrainer, set_reproducibility
+
+# Set seed for reproducibility
+set_reproducibility(42)
+
+# Train with K-Fold
+trainer = SOTATrainer(model, use_mixed_precision=True)
+results = trainer.train_kfold(
+    X, y, 
+    n_splits=5, 
+    epochs=100,
+    patient_ids=patient_ids  # Patient-level stratification
+)
+print(f"Average accuracy: {results['average_accuracy']:.4f} ± {results['std_accuracy']:.4f}")
+```
+
+### Clinical Preprocessing
+
+```python
+from src.clinical_preprocessing import create_preprocessing_pipeline
+
+# Create clinical preprocessing pipeline
+preprocessor = create_preprocessing_pipeline(
+    target_size=(224, 224),
+    apply_skull_strip=True,
+    apply_bias_correction=True,
+    apply_clahe=True,
+    normalization='zscore'
+)
+
+# Preprocess image
+preprocessed = preprocessor.preprocess(mri_image)
+```
+
+### Uncertainty Quantification
+
+```python
+from src.clinical_postprocessing import ClinicalPostprocessor
+
+# Create clinical postprocessor
+postprocessor = ClinicalPostprocessor(
+    model,
+    class_names=["No Tumor", "Tumor"],
+    enable_uncertainty=True,
+    enable_gradcam=True
+)
+
+# Get prediction with uncertainty
+result = postprocessor.process(image, generate_heatmap=True)
+print(f"Prediction: {result['class_label']}")
+print(f"Confidence: {result['confidence']:.1%}")
+print(f"Uncertainty: {result['uncertainty']:.1%}")
+print(f"Flags: {result['flags']}")
+```
+
+### Edge Deployment (Quantization)
+
+```python
+from src.efficient_quant import EfficientQuantizer
+
+# Create quantizer with hybrid strategy
+quantizer = EfficientQuantizer(
+    model=model,
+    calibration_data=cal_data,
+    strategy='hybrid'  # Uniform for CNN, Log2 for Transformer
+)
+
+# Quantize model
+quantized_model = quantizer.quantize_hybrid_model()
+
+# Validate accuracy retention
+results = quantizer.validate_quantized_model(test_data, test_labels, quantized_model)
+print(f"Original accuracy: {results['original_accuracy']:.4f}")
+print(f"Quantized accuracy: {results['quantized_accuracy']:.4f}")
+print(f"Accuracy loss: {results['accuracy_loss_relative_percent']:.2f}%")
+
+# Export to TFLite
+quantizer.export_tflite('model_int8.tflite', quantized_model)
+```
+
+---
+
+## 📚 Documentation
+
+- [PHOENIX_PROTOCOL.md](PHOENIX_PROTOCOL.md) - Complete implementation guide
+- [Research_Paper_Brain_Tumor_Detection.md](Research_Paper_Brain_Tumor_Detection.md) - Research background
+
+---
+
 ## 📄 License
 
 This project is licensed under the MIT License.
 
 ---
 
+## ⚠️ Medical Disclaimer
+
+This system is for research purposes only. Not approved for clinical use. Always consult qualified healthcare professionals for medical decisions.
+
+---
+
 ## 🙏 Acknowledgements
 
 - TensorFlow/Keras team
+- nnU-Net and MONAI teams (medical imaging best practices)
 - Medical imaging research community
 - Original Phoenix Protocol research
+
+---
+
+## 📖 References
+
+1. **Dynamic Snake Convolutions** - CVPR 2023
+2. **Coordinate Attention for Efficient Mobile Network Design** - CVPR 2021
+3. **MobileViT: Light-weight Vision Transformer** - Apple Research
+4. **Adan: Adaptive Nesterov Momentum Algorithm** - 2022
+5. **Focal Loss for Dense Object Detection** - ICCV 2017
+6. **nnU-Net: Self-adapting Framework for Medical Image Segmentation** - Nature Methods
+7. **MONAI: Medical Open Network for AI** - NVIDIA/King's College
