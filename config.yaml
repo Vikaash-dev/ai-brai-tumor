@@ -1,0 +1,368 @@
+# ==============================================================================
+# PHOENIX-v3.1 Configuration File
+# ==============================================================================
+# This YAML configuration file centralizes all hyperparameters and settings
+# to avoid hardcoding values in model files.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Model Architecture Configuration
+# ------------------------------------------------------------------------------
+model:
+  name: "phoenix_v3_1"
+  version: "3.1.0"
+  
+  # Input configuration
+  input:
+    width: 224
+    height: 224
+    channels: 3
+    # True 2.5D: Use [z-1, z, z+1] slices for volumetric context
+    use_true_2_5d: true
+    slice_context: 3  # Number of adjacent slices
+  
+  # Classification configuration
+  classification:
+    num_classes: 2
+    class_names: ["no_tumor", "tumor"]
+    # For multi-class: ["no_tumor", "glioma", "meningioma", "pituitary"]
+
+# ------------------------------------------------------------------------------
+# Hybrid Pyramid Architecture (Stages 1-4)
+# ------------------------------------------------------------------------------
+hybrid_pyramid:
+  # Stem configuration
+  stem:
+    filters: 32
+    kernel_size: 7
+    stride: 2
+    use_batch_norm: true
+  
+  # Stage 1-2: Conv2D blocks (high resolution, efficient)
+  conv_stages:
+    stage1:
+      filters: 32
+      num_blocks: 2
+      stride: 1
+      use_residual: true
+    stage2:
+      filters: 64
+      num_blocks: 2
+      stride: 2
+      use_residual: true
+  
+  # Stage 3-4: Liquid-S6-KAN blocks (low resolution, semantic)
+  ssm_stages:
+    stage3:
+      filters: 128
+      state_dim: 16
+      kernel_size: 4
+      num_cells: 2
+      use_kan: true
+    stage4:
+      filters: 256
+      state_dim: 16
+      kernel_size: 4
+      num_cells: 2
+      use_kan: true
+
+# ------------------------------------------------------------------------------
+# SpatialMixer Configuration (Topology Preservation)
+# ------------------------------------------------------------------------------
+spatial_mixer:
+  kernel_size: 3
+  use_depthwise: true
+  activation: "swish"
+  use_residual: true
+
+# ------------------------------------------------------------------------------
+# Liquid-S6 State Space Model Configuration
+# ------------------------------------------------------------------------------
+liquid_ssm:
+  state_dim: 16
+  dt_rank: "auto"  # "auto" = ceil(d_model / 16)
+  dt_min: 0.001
+  dt_max: 0.1
+  dt_init: "random"  # "random" or "constant"
+  dt_scale: 1.0
+  
+  # S4D-Lin initialization
+  a_init: "s4d_lin"  # "s4d_lin" or "hippo"
+  
+  # Liquid time constants
+  use_liquid_modulation: true
+  tau_min: 0.1
+  tau_max: 10.0
+
+# ------------------------------------------------------------------------------
+# KAN (Kolmogorov-Arnold Network) Configuration
+# ------------------------------------------------------------------------------
+kan:
+  grid_size: 5
+  spline_order: 3
+  scale_base: 1.0
+  scale_spline: 1.0
+  enable_standalone: true
+  grid_eps: 0.02
+  grid_range: [-1, 1]
+  
+  # TTT Spline adaptation
+  ttt_enabled: true
+  ttt_spline_only: true  # Only update spline weights during TTT
+
+# ------------------------------------------------------------------------------
+# Multi-Spectral Concordance Gating (MSCG)
+# ------------------------------------------------------------------------------
+spectral_gating:
+  enabled: true
+  fft_norm: "ortho"
+  concordance_threshold: 0.5
+  num_modalities: 4  # T1, T1ce, T2, FLAIR
+  fusion_method: "learned"  # "learned", "mean", "max"
+
+# ------------------------------------------------------------------------------
+# Priority Scout Configuration
+# ------------------------------------------------------------------------------
+priority_scout:
+  enabled: true
+  kernel_size: 7
+  activation: "sigmoid"
+  
+  # ROI modulation of Δ (time constant)
+  modulation_type: "delta"  # "delta" or "feature"
+  modulation_strength: 1.0
+
+# ------------------------------------------------------------------------------
+# Test-Time Training (TTT) Adapter
+# ------------------------------------------------------------------------------
+ttt_adapter:
+  enabled: true
+  mode: "symbolic_mirror"  # "symbolic_mirror", "tent", "dent"
+  
+  # Symbolic Mirror specific
+  target: "spline_only"  # "spline_only", "all", "bn_only"
+  
+  # Entropy threshold for adaptation
+  entropy_threshold: 0.3  # Only adapt if entropy > threshold
+  
+  # Optimization
+  learning_rate: 0.001
+  max_steps: 5
+  early_stop_delta: 0.001
+
+# ------------------------------------------------------------------------------
+# Training Configuration
+# ------------------------------------------------------------------------------
+training:
+  # Basic settings
+  batch_size: 32
+  epochs: 100
+  validation_split: 0.2
+  
+  # Optimizer (Adan recommended)
+  optimizer:
+    name: "adan"  # "adan", "adamw", "adam", "sgd"
+    learning_rate: 0.001
+    weight_decay: 0.0001
+    # Adan specific
+    beta1: 0.98
+    beta2: 0.92
+    beta3: 0.99
+    eps: 1.0e-8
+  
+  # Learning rate schedule
+  lr_schedule:
+    type: "cosine"  # "cosine", "step", "exponential", "warmup_cosine"
+    warmup_epochs: 5
+    min_lr: 1.0e-7
+  
+  # Loss function
+  loss:
+    name: "focal"  # "focal", "cross_entropy", "dice"
+    # Focal loss specific
+    alpha: 0.25
+    gamma: 2.0
+  
+  # Regularization
+  dropout_rate: 0.1
+  label_smoothing: 0.1
+  
+  # Callbacks
+  early_stopping:
+    patience: 15
+    monitor: "val_loss"
+    restore_best_weights: true
+  
+  reduce_lr:
+    patience: 5
+    factor: 0.5
+    min_lr: 1.0e-7
+
+# ------------------------------------------------------------------------------
+# Data Augmentation Configuration
+# ------------------------------------------------------------------------------
+augmentation:
+  enabled: true
+  
+  # Geometric augmentations
+  rotation_range: 20
+  width_shift_range: 0.1
+  height_shift_range: 0.1
+  shear_range: 0.1
+  zoom_range: 0.1
+  horizontal_flip: true
+  vertical_flip: false
+  
+  # Physics-informed augmentations (MRI-specific)
+  physics_informed:
+    enabled: true
+    elastic_deformation:
+      enabled: true
+      alpha: 100
+      sigma: 10
+      probability: 0.3
+    rician_noise:
+      enabled: true
+      snr_range: [15, 30]
+      probability: 0.3
+    bias_field:
+      enabled: true
+      order: 3
+      probability: 0.2
+
+# ------------------------------------------------------------------------------
+# Data Pipeline Configuration
+# ------------------------------------------------------------------------------
+data:
+  # Directories
+  train_dir: "data/train"
+  validation_dir: "data/validation"
+  test_dir: "data/test"
+  
+  # Preprocessing
+  preprocessing:
+    normalize: true
+    normalization_type: "zscore"  # "zscore", "minmax", "clahe"
+    
+    # Skull stripping (if available)
+    skull_strip: false
+    
+    # N4 bias correction
+    n4_correction: false
+  
+  # Deduplication (Phoenix Protocol)
+  deduplication:
+    enabled: true
+    method: "phash"
+    hamming_threshold: 5
+    remove_duplicates_from_test: true
+  
+  # Data loading
+  num_workers: 4
+  prefetch_buffer: 2
+  cache: true
+
+# ------------------------------------------------------------------------------
+# Input Validation Configuration (Security)
+# ------------------------------------------------------------------------------
+input_validation:
+  enabled: true
+  
+  # Dimension limits (prevent OOM attacks)
+  max_image_width: 512
+  max_image_height: 512
+  max_batch_size: 64
+  
+  # Value validation
+  check_nan: true
+  check_inf: true
+  check_range: true
+  value_range: [0.0, 1.0]  # Expected input range after normalization
+  
+  # Type validation
+  expected_dtype: "float32"
+  
+  # Memory limits
+  max_tensor_size_mb: 100
+
+# ------------------------------------------------------------------------------
+# Inference Configuration
+# ------------------------------------------------------------------------------
+inference:
+  # Test-Time Augmentation
+  tta_enabled: true
+  tta_transforms: ["none", "hflip", "rotate90", "rotate180", "rotate270"]
+  
+  # Uncertainty quantification
+  mc_dropout:
+    enabled: false
+    num_samples: 10
+  
+  # Confidence thresholding
+  confidence_threshold: 0.5
+  
+  # Grad-CAM visualization
+  grad_cam:
+    enabled: true
+    target_layers: ["stage4_output", "stage3_output"]
+
+# ------------------------------------------------------------------------------
+# Hardware Configuration
+# ------------------------------------------------------------------------------
+hardware:
+  # GPU settings
+  mixed_precision: true  # FP16 training
+  xla_compilation: false  # XLA JIT compilation
+  
+  # Memory optimization
+  gradient_checkpointing: false
+  max_gpu_memory_mb: null  # null = no limit
+  
+  # Distributed training
+  multi_gpu: false
+  strategy: "mirrored"  # "mirrored", "tpu", "parameter_server"
+
+# ------------------------------------------------------------------------------
+# Logging and Checkpointing
+# ------------------------------------------------------------------------------
+logging:
+  log_dir: "logs"
+  tensorboard: true
+  wandb: false
+  mlflow: false
+  
+  # Checkpointing
+  checkpoint_dir: "checkpoints"
+  save_best_only: true
+  save_freq: "epoch"
+
+# ------------------------------------------------------------------------------
+# Paths Configuration
+# ------------------------------------------------------------------------------
+paths:
+  base_dir: "."
+  data_dir: "data"
+  models_dir: "models/saved_models"
+  results_dir: "results"
+  logs_dir: "logs"
+  checkpoints_dir: "checkpoints"
+
+# ------------------------------------------------------------------------------
+# Validation Protocol (Preregistered)
+# ------------------------------------------------------------------------------
+validation:
+  # Cross-validation
+  cv_folds: 5
+  stratified: true
+  
+  # Statistical testing
+  significance_level: 0.05
+  bonferroni_correction: true
+  
+  # Target benchmarks
+  targets:
+    dice_whole_tumor: 0.93
+    dice_enhancing: 0.87
+    hausdorff95_mm: 3.5
+    parameters_millions: 1.18
+    inference_time_seconds: 0.3
