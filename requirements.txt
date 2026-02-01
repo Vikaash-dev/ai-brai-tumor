@@ -1,25 +1,88 @@
-# Brain Tumor Detection - Dependencies
-# Core ML/DL
-tensorflow>=2.12.0
-keras>=2.12.0
-numpy>=1.23.0
-scipy>=1.10.0
+# =============================================================================
+# PHOENIX-v3.1 Brain Tumor Detection - Pinned Dependencies
+# =============================================================================
+# Reference: Appendix A.2 - Dependency Pinning (was: TensorFlow version not locked)
+# Last Updated: 2026-02-01
+# =============================================================================
 
-# Image Processing
-opencv-python>=4.7.0
-pillow>=9.5.0
-scikit-image>=0.20.0
+# -----------------------------------------------------------------------------
+# Core ML/DL Framework (PINNED for reproducibility)
+# -----------------------------------------------------------------------------
+# TensorFlow 2.16.1 is the validated version for PHOENIX-v3.1
+# DO NOT upgrade without running full validation suite
+tensorflow==2.16.1
+keras==3.0.5
 
-# Data Science
-pandas>=2.0.0
-scikit-learn>=1.2.0
-matplotlib>=3.7.0
-seaborn>=0.12.0
+# -----------------------------------------------------------------------------
+# Numerical Computing (PINNED)
+# -----------------------------------------------------------------------------
+numpy==1.26.4
+scipy==1.12.0
 
-# Utilities
-tqdm>=4.65.0
-imagehash>=4.3.0
+# -----------------------------------------------------------------------------
+# Image Processing (PINNED)
+# -----------------------------------------------------------------------------
+opencv-python==4.9.0.80
+pillow==10.2.0
+scikit-image==0.22.0
 
-# Optional: Jupyter notebooks
-jupyter>=1.0.0
-notebook>=6.5.0
+# -----------------------------------------------------------------------------
+# Data Science (PINNED)
+# -----------------------------------------------------------------------------
+pandas==2.2.0
+scikit-learn==1.4.0
+matplotlib==3.8.2
+seaborn==0.13.2
+
+# -----------------------------------------------------------------------------
+# Utilities (PINNED)
+# -----------------------------------------------------------------------------
+tqdm==4.66.1
+imagehash==4.3.1
+
+# -----------------------------------------------------------------------------
+# Configuration
+# -----------------------------------------------------------------------------
+pyyaml==6.0.1
+
+# -----------------------------------------------------------------------------
+# Medical Imaging (Optional but recommended)
+# -----------------------------------------------------------------------------
+# nibabel==5.2.0  # For NIfTI file support
+# SimpleITK==2.3.1  # For advanced medical image processing
+
+# -----------------------------------------------------------------------------
+# Development & Testing (Optional)
+# -----------------------------------------------------------------------------
+# pytest==8.0.0
+# pytest-cov==4.1.0
+# black==24.1.1
+# mypy==1.8.0
+
+# -----------------------------------------------------------------------------
+# Jupyter Notebooks (Optional)
+# -----------------------------------------------------------------------------
+jupyter==1.0.0
+notebook==7.0.7
+ipywidgets==8.1.1
+
+# -----------------------------------------------------------------------------
+# Experiment Tracking (Optional)
+# -----------------------------------------------------------------------------
+# wandb==0.16.2
+# mlflow==2.10.0
+# tensorboard==2.16.1
+
+# =============================================================================
+# Installation Notes:
+# =============================================================================
+# 1. Create virtual environment: python -m venv venv
+# 2. Activate: source venv/bin/activate (Linux/Mac) or venv\Scripts\activate (Windows)
+# 3. Install: pip install -r requirements.txt
+# 4. GPU support: pip install tensorflow[and-cuda] (for NVIDIA GPUs)
+#
+# Tested on:
+# - Python 3.10, 3.11
+# - Ubuntu 22.04, Windows 11
+# - CUDA 12.1 / cuDNN 8.9
+# =============================================================================
