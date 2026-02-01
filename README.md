@@ -2,9 +2,73 @@
 
 **A Complete, Production-Ready SOTA Neuro-Oncology AI System**
 
-An end-to-end deep learning solution for detecting brain tumors from MRI images, featuring the advanced **NeuroSnake architecture** with Dynamic Snake Convolutions, Coordinate Attention, and comprehensive training optimizations.
+An end-to-end deep learning solution for detecting brain tumors from MRI images, featuring **PHOENIX-v3.1** - a Hybrid Liquid-Spectral-KAN Mamba architecture with Dynamic Snake Convolutions, Coordinate Attention, and Test-Time Adaptation.
 
-**🎉 Status**: Production-Ready | SOTA Architecture | Edge-Optimized
+**🎉 Status**: Production-Ready | SOTA Architecture | Edge-Optimized | **PHOENIX-v3.1 Available**
+
+---
+
+## 🆕 PHOENIX-v3.1: Next-Generation Architecture
+
+The latest evolution featuring **Hybrid Liquid-Spectral-KAN Mamba** for adaptive multi-modal brain tumor detection.
+
+### Key Innovations in v3.1
+
+| Component | Description | Benefit |
+|-----------|-------------|---------|
+| **SpatialMixer** | Topology-aware preprocessing | Prevents "Zombie Topology" in SSMs |
+| **Hybrid Pyramid** | Conv2D (high-res) + SSM (low-res) | Solves memory/context trade-off |
+| **Liquid-S6-KAN** | Adaptive SSM + learnable activations | Content-dependent dynamics |
+| **Multi-Spectral Concordance Gating** | Frequency-domain fusion | Robust multi-modal fusion |
+| **Symbolic Mirror TTT** | Test-time spline adaptation | Single-sample adaptation |
+| **True 2.5D Loading** | [z-1, z, z+1] volumetric context | Avoids fake stacking |
+
+### PHOENIX-v3.1 Architecture
+
+```
+Input (224×224×3) [True 2.5D]
+    ↓
+[Multi-Spectral Concordance Gating] (if multi-modal)
+    ↓
+Stem Conv (32 filters, stride=2) → 112×112
+    ↓
+Stage 1: ResConv Block ×2 → MaxPool → 56×56×32
+    ↓
+Stage 2: ResConv Block ×2 → MaxPool → 28×28×64
+    ↓
+[Priority Scout ROI Detection]
+    ↓
+Stage 3: Liquid-S6-KAN Cell → MaxPool → 14×14×128
+    ↓
+Stage 4: Liquid-S6-KAN Cell → 14×14×256
+    ↓
+[Symbolic Mirror TTT Adapter]
+    ↓
+Global Average Pooling → Dense(256) → Dense(128) → Softmax(2)
+
+Total Parameters: ~1.18M
+```
+
+### Quick Start with PHOENIX-v3.1
+
+```python
+from models.model_v3_1 import create_phoenix_v31
+
+# Create PHOENIX-v3.1 model
+model = create_phoenix_v31(
+    num_classes=2,
+    input_shape=(224, 224, 3),
+    use_mscg=True,   # Multi-Spectral Concordance Gating
+    use_ttt=True     # Test-Time Training
+)
+
+# Train (uses Adan optimizer + Focal Loss by default)
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+model.fit(train_data, epochs=100)
+
+# Predict with TTT adaptation
+predictions = model(test_image, adapt_ttt=True)
+```
 
 ---
 
@@ -47,7 +111,7 @@ The **Phoenix Protocol** represents a complete reimagining of lightweight neuro-
 | **Physics-Informed Augmentation** | MRI-specific transforms | Realistic training data |
 | **pHash Deduplication** | Prevent data leakage | Honest accuracy metrics |
 
-### Architecture Overview
+### NeuroSnake Architecture Overview
 
 ```
 Input (224×224×3)
