@@ -378,10 +378,13 @@ class LiquidSSMWithDeltaModulation(layers.Layer):
             else:
                 priority_expanded = tf.expand_dims(priority_map, -1)
             
-            # Tile to match d_inner
-            priority_expanded = tf.tile(
-                priority_expanded, 
-                [1, 1, self.d_inner // priority_expanded.shape[-1]]
+            # Broadcast to match d_inner using tf operations for robustness
+            # Instead of tiling (which requires exact division), use broadcasting
+            # priority_expanded: (B, L, 1) -> dt: (B, L, d_inner)
+            # Simply broadcast the scalar priority value across all d_inner dimensions
+            priority_expanded = tf.broadcast_to(
+                priority_expanded,
+                tf.shape(dt)  # Dynamically match dt shape
             )
             
             # Apply modulation: exp(-P) ranges from exp(-1)≈0.37 to exp(0)=1
@@ -463,6 +466,10 @@ class UnifiedLiquidS6KANCell(layers.Layer):
         )
         
         # Positional encoding
+        # NOTE: Fixed input size requirement. Model expects inputs of shape (B, h, w, C)
+        # where h and w are defined at build time. If variable input sizes are needed,
+        # consider using relative positional encoding or interpolating this encoding.
+        self.expected_seq_len = h * w
         self.pos_encoding = self.add_weight(
             name='pos_encoding',
             shape=(1, h * w, self.channels),

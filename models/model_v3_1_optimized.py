@@ -415,7 +415,9 @@ class PHOENIXv31Optimized(keras.Model):
         x = self.stage3_pool(x)  # (B, 14, 14, 96)
         
         # Downsample ROI map for stage 4
-        roi_map_ds = tf.nn.avg_pool2d(roi_map, ksize=2, strides=2, padding='SAME')
+        # Using max pooling to preserve the highest priority (tumor) regions
+        # rather than averaging which could dilute important ROI signals
+        roi_map_ds = tf.nn.max_pool2d(roi_map, ksize=2, strides=2, padding='SAME')
         
         # Stage 4: Unified Liquid-S6-KAN with Δ modulation
         x = self.stage4_proj(x)  # (B, 14, 14, 192)
@@ -423,8 +425,12 @@ class PHOENIXv31Optimized(keras.Model):
         
         # TTT Adaptation
         if self.ttt_adapter is not None:
-            batch_size = tf.shape(x)[0]
-            h, w, c = x.shape[1], x.shape[2], x.shape[3]
+            # Use dynamic shape extraction for robustness with symbolic tensors
+            x_shape = tf.shape(x)
+            batch_size = x_shape[0]
+            h = x_shape[1]
+            w = x_shape[2]
+            c = x_shape[3]
             x_flat = tf.reshape(x, (batch_size, h * w, c))
             x_flat = self.ttt_adapter(x_flat, adapt=adapt_ttt, training=training)
             x = tf.reshape(x_flat, (batch_size, h, w, c))
