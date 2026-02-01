@@ -310,11 +310,11 @@ if __name__ == '__main__':
     # Demo visualization with sample data
     print("Visualization module - Demo mode")
 
-    # Generate sample training history
+    # Generate sample training history with realistic progression
     epochs = 50
     sample_history = {
-        'accuracy': np.random.uniform(0.7, 0.95, epochs).cumsum() / np.arange(1, epochs+1) * 0.95,
-        'val_accuracy': np.random.uniform(0.65, 0.92, epochs).cumsum() / np.arange(1, epochs+1) * 0.92,
+        'accuracy': np.linspace(0.7, 0.95, epochs) + np.random.uniform(-0.02, 0.02, epochs),
+        'val_accuracy': np.linspace(0.65, 0.92, epochs) + np.random.uniform(-0.03, 0.03, epochs),
         'loss': np.linspace(1.5, 0.2, epochs) + np.random.uniform(-0.1, 0.1, epochs),
         'val_loss': np.linspace(1.6, 0.3, epochs) + np.random.uniform(-0.15, 0.15, epochs)
     }

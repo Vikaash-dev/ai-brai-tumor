@@ -92,10 +92,11 @@ class PhysicsInformedAugmentation:
         # Create coordinate grid
         x, y = np.meshgrid(np.arange(shape[1]), np.arange(shape[0]))
         
-        # Apply displacement
+        # Apply displacement and clip to valid range
+        # Note: map_coordinates with order=1 supports float coordinates for bilinear interpolation
         indices = [
-            np.clip(y + dy, 0, shape[0] - 1).astype(np.float32),
-            np.clip(x + dx, 0, shape[1] - 1).astype(np.float32)
+            np.clip(y + dy, 0, shape[0] - 1),
+            np.clip(x + dx, 0, shape[1] - 1)
         ]
         
         # Apply to each channel if multi-channel

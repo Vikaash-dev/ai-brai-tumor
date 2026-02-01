@@ -359,11 +359,19 @@ class PhoenixProtocolTrainer:
         print("Generating predictions...")
         predictions = self.model.predict(test_generator, verbose=1)
         y_pred = np.argmax(predictions, axis=1)
-        y_pred_proba = predictions[:, 1] if predictions.shape[1] == 2 else predictions.max(axis=1)
+        
+        # For binary classification, use probability of positive class (index 1)
+        # This is required for ROC-AUC calculation
+        if predictions.shape[1] == 2:
+            y_pred_proba = predictions[:, 1]
+        else:
+            # For multi-class, ROC-AUC requires different handling
+            y_pred_proba = predictions[:, 1] if self.num_classes == 2 else None
+            
         y_true = test_generator.classes
         
         # Calculate metrics
-        metrics = calculate_metrics(y_true, y_pred, y_pred_proba)
+        metrics = calculate_metrics(y_true, y_pred, y_pred_proba if y_pred_proba is not None else predictions[:, 1])
         
         # Print and save report
         print_evaluation_report(metrics, config.CLASS_NAMES)

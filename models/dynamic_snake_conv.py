@@ -220,8 +220,9 @@ class DynamicSnakeConv2D(layers.Layer):
             Base grid tensor
         """
         # Create kernel offset coordinates
-        kernel_y = tf.range(-(kernel_h // 2), kernel_h // 2 + 1, dtype=tf.float32)
-        kernel_x = tf.range(-(kernel_w // 2), kernel_w // 2 + 1, dtype=tf.float32)
+        # Handle both odd and even kernel sizes correctly
+        kernel_y = tf.range(-(kernel_h // 2), (kernel_h + 1) // 2, dtype=tf.float32)
+        kernel_x = tf.range(-(kernel_w // 2), (kernel_w + 1) // 2, dtype=tf.float32)
         kernel_y, kernel_x = tf.meshgrid(kernel_y, kernel_x, indexing='ij')
         
         kernel_grid = tf.stack([kernel_y, kernel_x], axis=-1)
